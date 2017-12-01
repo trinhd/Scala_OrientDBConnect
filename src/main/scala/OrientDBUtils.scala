@@ -15,14 +15,14 @@ object OrientDBUtils {
    - In-Memory Embedded Graph Database: Keeps all data in memory. Use the memory prefix, for instance memory:test.
    - Persistent Remote Graph Database Uses a binary protocol to send and receive data from a remote OrientDB server. Use the remote prefix, for instance remote:localhost/test Note that this requires an OrientDB server instance up and running at the specific address, (in this case, localhost). Remote databases can be persistent or in-memory as well.
    */
-  val hostType = "plocal:" //plocal: or remote: or memory:
-  val hostAddress = "/home/duytri/Downloads/Apps/orientdb-community-importers-2.2.30/databases" //if hostType is "memory:", set it empty
+  val hostType = "remote:" //plocal: or remote: or memory:
+  val hostAddress = "127.0.0.1" //if hostType is "memory:", set it empty
   //val port     = 2424
-  val username = "root"
-  val password = "12345"
+  //val username = "root"
+  //val password = "12345"
   val database = "CoOccurrenceGraph"
-  val dbUser = "admin"
-  val dbPassword = "admin"
+  val dbUser = "duytri"
+  val dbPassword = "12345"
   val labelSubject = "subject"
   val labelName = "name"
   val tab_v = "dinh"
@@ -51,9 +51,9 @@ object OrientDBUtils {
     }
 
     if (!factory.exists) println("Database chưa tồn tại, chương trình sẽ tiến hành khởi tạo!") //Remote databases must already exist
-    
+
     //Using Transaction Instance of Database
-    val graph: OrientGraph = factory.getTx 
+    val graph: OrientGraph = factory.getTx
     /*
     Prior to version 2.1.7, to work with a graph always use transactional OrientGraph instances and never the non-transactional instances to avoid graph corruption from multi-threaded updates.
 		Non-transactional graph instances are created with .getNoTx()
@@ -81,10 +81,10 @@ object OrientDBUtils {
       println("Kết nối thành công với cơ sở dữ liệu!")
       graph.shutdown
     }
-    
+
     //Using Non-Transaction Instance of Database
     /*val graph: OrientGraphNoTx = factory.getNoTx
-    
+
     try {
       //Nếu chưa có database thì khởi tạo cấu trúc database
       if (graph.getVertexType(tab_v) == null) {
@@ -105,10 +105,17 @@ object OrientDBUtils {
       println("Kết nối thành công với cơ sở dữ liệu!")
       graph.shutdown
     }*/
-    
+
     factory
   }
 
+  /**
+   * Hàm thêm một đỉnh mới cho đồ thị
+   * @param factory: Object dùng để tạo liên kết tới database
+   * @param subject: Chủ đề của đỉnh cần thêm vào
+   * @param Name: Tên đỉnh cần thêm
+   * @return <code>true</code>: nếu thành công, <code>false</code>: nếu thất bại
+   */
   def insertVertex(factory: OrientGraphFactory, subject: String, Name: String): Boolean = {
     val graph: OrientGraph = factory.getTx
     try {
@@ -126,6 +133,31 @@ object OrientDBUtils {
       }
     } finally {
       println("Thực hiện thành công lệnh thêm dữ liệu!")
+      graph.shutdown
+    }
+    return true
+
+  }
+
+  def insertVertexInBatches(factory: OrientGraphFactory, vertices: Map[String, String]): Boolean = {
+    val graph: OrientGraphNoTx = factory.getNoTx
+    try {
+      for ((name, sub) <- vertices) {
+        val vertex: Vertex = graph.addVertex("class:" + tab_v, Nil: _*)
+        vertex.setProperty(labelSubject, sub)
+        vertex.setProperty(labelName, name)
+      }
+      graph.commit
+    } catch {
+      case t: Throwable => {
+        println("************************ ERROR ************************")
+        println("Có LỖI xảy ra!!")
+        t.printStackTrace() // TODO: handle error
+        println("************************ ERROR ************************")
+        return false
+      }
+    } finally {
+      println("Thực hiện thành công lệnh thêm dữ liệu theo lô!")
       graph.shutdown
     }
     return true
