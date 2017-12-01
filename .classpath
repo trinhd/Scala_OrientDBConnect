@@ -4,6 +4,10 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="libs/orientdb-core-2.2.30.jar"/>
 	<classpathentry kind="lib" path="libs/orientdb-graphdb-2.2.30.jar"/>
+	<classpathentry kind="lib" path="libs/blueprints-core-2.6.0.jar"/>
+	<classpathentry kind="lib" path="libs/concurrentlinkedhashmap-lru-1.4.1.jar"/>
+	<classpathentry kind="lib" path="libs/jna-4.5.0.jar"/>
+	<classpathentry kind="lib" path="libs/orientdb-client-2.2.30.jar"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
