@@ -1,8 +1,11 @@
 package main.scala
 
+import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory
+
 object MainProgram {
   def main(args: Array[String]): Unit = {
-    val connect = new OrientDBUtils
-    connect.connectDBUsingGraphAPI()
+    val factory: OrientGraphFactory = OrientDBUtils.connectDBUsingGraphAPI()
+    OrientDBUtils.insertVertex(factory, "Name", "Tri")
+    return
   }
 }
