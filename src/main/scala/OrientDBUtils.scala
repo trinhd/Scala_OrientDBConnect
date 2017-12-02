@@ -7,6 +7,8 @@ import com.orientechnologies.orient.core.metadata.schema.OType
 import com.tinkerpop.blueprints.impls.orient.OrientEdgeType
 import com.tinkerpop.blueprints.Vertex
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx
+import scala.collection.mutable.ListBuffer
+import com.tinkerpop.blueprints.Edge
 
 object OrientDBUtils {
   /*
@@ -15,11 +17,10 @@ object OrientDBUtils {
    - In-Memory Embedded Graph Database: Keeps all data in memory. Use the memory prefix, for instance memory:test.
    - Persistent Remote Graph Database Uses a binary protocol to send and receive data from a remote OrientDB server. Use the remote prefix, for instance remote:localhost/test Note that this requires an OrientDB server instance up and running at the specific address, (in this case, localhost). Remote databases can be persistent or in-memory as well.
    */
-  val hostType = "remote:" //plocal: or remote: or memory:
-  val hostAddress = "127.0.0.1" //if hostType is "memory:", set it empty
-  //val port     = 2424
-  //val username = "root"
-  //val password = "12345"
+  //plocal: or remote: or memory:
+  val hostType = "remote:"
+  //if hostType is "memory:", set it empty
+  val hostAddress = "localhost" //"/home/duytri/Downloads/Apps/orientdb-community-importers-2.2.30/databases"
   val database = "CoOccurrenceGraph"
   val dbUser = "duytri"
   val dbPassword = "12345"
@@ -27,6 +28,9 @@ object OrientDBUtils {
   val labelName = "name"
   val tab_v = "dinh"
   val tab_e = "cooccurr_with"
+  //val port     = 2424
+  //val username = "root"
+  //val password = "12345"
 
   /**
    * Hàm thiết lập kết nối đến OrientDB sử dụng Java Native Driver Graph API
@@ -50,15 +54,17 @@ object OrientDBUtils {
       factory = new OrientGraphFactory(uri, dbUser, dbPassword)
     }
 
-    if (!factory.exists) println("Database chưa tồn tại, chương trình sẽ tiến hành khởi tạo!") //Remote databases must already exist
+    if ((hostType != "remote:") && (!factory.exists))
+      println("Database chưa tồn tại, chương trình sẽ tiến hành khởi tạo!") //Remote databases must already exist
 
-    //Using Transaction Instance of Database
-    val graph: OrientGraph = factory.getTx
     /*
     Prior to version 2.1.7, to work with a graph always use transactional OrientGraph instances and never the non-transactional instances to avoid graph corruption from multi-threaded updates.
 		Non-transactional graph instances are created with .getNoTx()
 		This instance is only useful when you don't work with data, but want to define the database schema or for bulk inserts.
 		*/
+
+    //Using Transaction Instance of Database
+    val graph: OrientGraph = factory.getTx
 
     try {
       //Nếu chưa có database thì khởi tạo cấu trúc database
@@ -80,6 +86,7 @@ object OrientDBUtils {
     } finally {
       println("Kết nối thành công với cơ sở dữ liệu!")
       graph.shutdown
+      println("All Done!!!")
     }
 
     //Using Non-Transaction Instance of Database
@@ -104,6 +111,7 @@ object OrientDBUtils {
     } finally {
       println("Kết nối thành công với cơ sở dữ liệu!")
       graph.shutdown
+      println("All Done!!!")
     }*/
 
     factory
@@ -114,12 +122,18 @@ object OrientDBUtils {
    * @param factory: Object dùng để tạo liên kết tới database
    * @param subject: Chủ đề của đỉnh cần thêm vào
    * @param Name: Tên đỉnh cần thêm
-   * @return <code>true</code>: nếu thành công, <code>false</code>: nếu thất bại
+   * @return Trả về đỉnh mới thêm vào nếu thành công, <code>null</code> nếu thất bại
    */
-  def insertVertex(factory: OrientGraphFactory, subject: String, Name: String): Boolean = {
+  def insertVertex(factory: OrientGraphFactory, Subject: String, Name: String): Vertex = {
+    var vertex: Vertex = null
     val graph: OrientGraph = factory.getTx
     try {
-      val vertex: Vertex = graph.addVertex("class:" + tab_v, labelSubject, subject, labelName, Name)
+      vertex = graph.addVertex("class:" + tab_v, labelSubject, Subject, labelName, Name)
+
+      //Cách thêm cạnh khác
+      /*vertex = graph.addVertex("class:" + tab_v, Nil: _*)
+      vertex.setProperty(labelSubject, Subject)
+      vertex.setProperty(labelName, Name)*/
 
       graph.commit
     } catch {
@@ -129,23 +143,34 @@ object OrientDBUtils {
         t.printStackTrace() // TODO: handle error
         println("************************ ERROR ************************")
         graph.rollback
-        return false
       }
     } finally {
-      println("Thực hiện thành công lệnh thêm dữ liệu!")
+      println("Thực hiện thành công lệnh thêm dữ liệu đỉnh!")
       graph.shutdown
+      println("All Done!!!")
     }
-    return true
-
+    vertex
   }
 
-  def insertVertexInBatches(factory: OrientGraphFactory, vertices: Map[String, String]): Boolean = {
+  /**
+   * Hàm thêm đỉnh mới theo lô cho đồ thị
+   * @param factory: Object dùng để tạo liên kết tới database
+   * @param vertices: Map chứa thông tin đỉnh cần thêm các phần tử có cấu trúc (name -> subject)
+   * @return Danh sách đỉnh mới thêm vào nếu thành công, danh sách rỗng nếu thất bại
+   */
+  def insertVertexInBatches(factory: OrientGraphFactory, vertices: Map[String, String]): ListBuffer[Vertex] = {
+    var lVertex: ListBuffer[Vertex] = ListBuffer()
     val graph: OrientGraphNoTx = factory.getNoTx
     try {
       for ((name, sub) <- vertices) {
-        val vertex: Vertex = graph.addVertex("class:" + tab_v, Nil: _*)
+        val vertex = graph.addVertex("class:" + tab_v, labelSubject, sub, labelName, name)
+
+        //Cách thêm cạnh khác
+        /*val vertex: Vertex = graph.addVertex("class:" + tab_v, Nil: _*)
         vertex.setProperty(labelSubject, sub)
-        vertex.setProperty(labelName, name)
+        vertex.setProperty(labelName, name)*/
+
+        lVertex += vertex
       }
       graph.commit
     } catch {
@@ -154,13 +179,75 @@ object OrientDBUtils {
         println("Có LỖI xảy ra!!")
         t.printStackTrace() // TODO: handle error
         println("************************ ERROR ************************")
-        return false
       }
     } finally {
-      println("Thực hiện thành công lệnh thêm dữ liệu theo lô!")
+      println("Thực hiện thành công lệnh thêm dữ liệu đỉnh theo lô!")
       graph.shutdown
+      println("All Done!!!")
     }
-    return true
+    lVertex
+  }
 
+  /**
+   * Hàm thêm một cạnh mới cho đồ thị
+   * @param factory: Object dùng để tạo liên kết tới database
+   * @param vFrom: đỉnh đầu cạnh
+   * @param vTo: đỉnh cuối cạnh
+   * @return Trả về cạnh mới thêm vào nếu thành công, <code>null</code> nếu thất bại
+   */
+  def insertEdge(factory: OrientGraphFactory, vFrom: Vertex, vTo: Vertex): Edge = {
+    var edge: Edge = null
+    val graph: OrientGraph = factory.getTx
+    try {
+      edge = graph.addEdge("class:" + tab_e, vFrom, vTo, null)
+      //Cách khác để thêm cạnh
+      //edge = vFrom.addEdge(tab_e, vTo)
+
+      graph.commit
+    } catch {
+      case t: Throwable => {
+        println("************************ ERROR ************************")
+        println("Có LỖI xảy ra!!")
+        t.printStackTrace() // TODO: handle error
+        println("************************ ERROR ************************")
+        graph.rollback
+      }
+    } finally {
+      println("Thực hiện thành công lệnh thêm dữ liệu cạnh!")
+      graph.shutdown
+      println("All Done!!!")
+    }
+    edge
+  }
+
+  /**
+   * Hàm thêm cạnh mới theo lô cho đồ thị
+   * @param factory: Object dùng để tạo liên kết tới database
+   * @param edges: Map chứa thông tin cạnh cần thêm, các phần tử có cấu trúc (vFrom -> vTo)
+   * @return Danh sách cạnh mới thêm vào nếu thành công, danh sách rỗng nếu thất bại
+   */
+  def insertEdgeInBatches(factory: OrientGraphFactory, edges: Map[Vertex, Vertex]): ListBuffer[Edge] = {
+    var lEdge: ListBuffer[Edge] = ListBuffer()
+    val graph: OrientGraphNoTx = factory.getNoTx
+    try {
+      for ((vFrom, vTo) <- edges) {
+        val edge: Edge = graph.addEdge("class:" + tab_e, vFrom, vTo, null)
+
+        lEdge += edge
+      }
+      graph.commit
+    } catch {
+      case t: Throwable => {
+        println("************************ ERROR ************************")
+        println("Có LỖI xảy ra!!")
+        t.printStackTrace() // TODO: handle error
+        println("************************ ERROR ************************")
+      }
+    } finally {
+      println("Thực hiện thành công lệnh thêm dữ liệu cạnh theo lô!")
+      graph.shutdown
+      println("All Done!!!")
+    }
+    lEdge
   }
 }
