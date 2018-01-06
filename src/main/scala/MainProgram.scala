@@ -4,6 +4,7 @@ import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory
 
 object MainProgram {
   def main(args: Array[String]): Unit = {
+    val OrientDBUtils = new OrientDBUtils
     val factory: OrientGraphFactory = OrientDBUtils.connectDBUsingGraphAPI()
     val v1 = OrientDBUtils.insertVertex(factory, "Name", "Hoa")
     val v2 = OrientDBUtils.insertVertex(factory, "Name", "Tri")

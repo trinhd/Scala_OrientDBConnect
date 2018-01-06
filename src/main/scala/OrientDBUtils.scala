@@ -9,8 +9,10 @@ import com.tinkerpop.blueprints.Vertex
 import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx
 import scala.collection.mutable.ListBuffer
 import com.tinkerpop.blueprints.Edge
+import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx
+import com.orientechnologies.orient.core.db.OPartitionedDatabasePool
 
-object OrientDBUtils {
+class OrientDBUtils {
   /*
   OrientDB supports three different kinds of storages, depending on the Database URL used:
    - Persistent Embedded Graph Database: Links to the application as a JAR, (that is, with no network transfer). Use PLocal with the plocal prefix. For instance, plocal:/tmp/graph/test.
@@ -18,25 +20,33 @@ object OrientDBUtils {
    - Persistent Remote Graph Database Uses a binary protocol to send and receive data from a remote OrientDB server. Use the remote prefix, for instance remote:localhost/test Note that this requires an OrientDB server instance up and running at the specific address, (in this case, localhost). Remote databases can be persistent or in-memory as well.
    */
   //plocal: or remote: or memory:
-  val hostType = "remote:"
+  var hostType = "remote:"
   //if hostType is "memory:", set it empty
-  val hostAddress = "localhost" //"/home/duytri/Downloads/Apps/orientdb-community-importers-2.2.30/databases"
-  val database = "CoOccurrenceGraph"
-  val dbUser = "duytri"
-  val dbPassword = "12345"
-  val labelSubject = "subject"
-  val labelName = "name"
-  val tab_v = "dinh"
-  val tab_e = "cooccurr_with"
-  //val port     = 2424
-  //val username = "root"
-  //val password = "12345"
+  var hostAddress = "localhost" //"/home/duytri/Downloads/Apps/orientdb-community-importers-2.2.30/databases"
+  var database = "CoOccurrenceGraph"
+  var dbUser = "duytri"
+  var dbPassword = "12345"
+  var labelSubject = "subject"
+  var labelName = "name"
+  var tab_v = "dinh"
+  var tab_e = "cooccurr_with"
+  //var port     = 2424
+  //var username = "root"
+  //var password = "12345"
+
+  def OrientDBUtils(hostType: String, hostAddress: String, database: String, dbUser: String, dbPassword: String) = {
+    this.hostType = hostType
+    this.hostAddress = hostAddress
+    this.database = database
+    this.dbUser = dbUser
+    this.dbPassword = dbPassword
+  }
 
   /**
-   * Hàm thiết lập kết nối đến OrientDB sử dụng Java Native Driver Graph API
-   * @return GraphFactory để khởi tạo kết nối database khi cần
+   * Hàm tạo chuỗi kết nối cơ sở dữ liệu theo thông tin sẵn có
+   * @return Hàm trả về chuỗi kết nối đã tạo nếu các thông tin chính xác, ngược lại trả về <code>null</code>
    */
-  def connectDBUsingGraphAPI(): OrientGraphFactory = {
+  def createConnectURI(): String = {
     var uri = hostType
     if ((uri == "plocal:") || (uri == "remote:")) {
       uri += hostAddress + "/" + database
@@ -44,6 +54,21 @@ object OrientDBUtils {
       uri += database
     } else {
       println("Thông tin kết nối cơ sở dữ liệu không chính xác. Vui lòng kiểm tra lại!")
+      return null
+    }
+    uri
+  }
+
+  //---------------------------PART OF GRAPH DATABASE--------------------------------
+
+  /**
+   * Hàm thiết lập kết nối đến OrientDB sử dụng Java Native Driver Graph API
+   * @return GraphFactory để khởi tạo kết nối database khi cần
+   */
+  def connectDBUsingGraphAPI(): OrientGraphFactory = {
+    var uri = createConnectURI()
+
+    if (uri == null) {
       return null
     }
 
@@ -249,5 +274,19 @@ object OrientDBUtils {
       println("All Done!!!")
     }
     lEdge
+  }
+
+  //---------------------------PART OF DOCUMENT DATABASE--------------------------------
+
+  def connectDBUsingDocAPI(): OPartitionedDatabasePool = {
+    var uri = createConnectURI()
+
+    if (uri == null) {
+      return null
+    }
+
+    var db = new OPartitionedDatabasePool(uri, dbUser, dbPassword)
+
+    db
   }
 }
