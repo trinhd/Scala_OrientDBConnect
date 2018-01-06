@@ -11,5 +11,8 @@ object MainProgram {
     val edgeID = OrientDBUtils.insertEdge(factory, v1, v2)
     val datas = Map("Nguyen" -> "Name", "Ho" -> "Name", "Duy" -> "Name")
     //OrientDBUtils.insertVertexInBatches(factory, datas)
+    
+    val OrientDBUtilsDoc = new OrientDBUtils("remote:","localhost", "CoOccurrenceGraph","admin", "admin", "root", "12345")
+    OrientDBUtilsDoc.insertDoc("CCC", List(("Name", "DDDDDDDDD")))
   }
 }

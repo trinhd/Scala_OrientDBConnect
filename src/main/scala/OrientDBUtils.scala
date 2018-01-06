@@ -11,8 +11,10 @@ import scala.collection.mutable.ListBuffer
 import com.tinkerpop.blueprints.Edge
 import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx
 import com.orientechnologies.orient.core.db.OPartitionedDatabasePool
+import com.orientechnologies.orient.client.remote.OServerAdmin
+import com.orientechnologies.orient.core.record.impl.ODocument
 
-class OrientDBUtils {
+class OrientDBUtils(hostType: String, hostAddress: String, database: String, dbUser: String, dbPassword: String, userRoot: String, pwdRoot: String) {
   /*
   OrientDB supports three different kinds of storages, depending on the Database URL used:
    - Persistent Embedded Graph Database: Links to the application as a JAR, (that is, with no network transfer). Use PLocal with the plocal prefix. For instance, plocal:/tmp/graph/test.
@@ -20,26 +22,28 @@ class OrientDBUtils {
    - Persistent Remote Graph Database Uses a binary protocol to send and receive data from a remote OrientDB server. Use the remote prefix, for instance remote:localhost/test Note that this requires an OrientDB server instance up and running at the specific address, (in this case, localhost). Remote databases can be persistent or in-memory as well.
    */
   //plocal: or remote: or memory:
-  var hostType = "remote:"
+  //var hostType = "remote:"
   //if hostType is "memory:", set it empty
-  var hostAddress = "localhost" //"/home/duytri/Downloads/Apps/orientdb-community-importers-2.2.30/databases"
-  var database = "CoOccurrenceGraph"
-  var dbUser = "duytri"
-  var dbPassword = "12345"
+  //var hostAddress = "localhost" //"/home/duytri/Downloads/Apps/orientdb-community-importers-2.2.30/databases"
+  //var database = "CoOccurrenceGraph"
+  //var dbUser = "admin"
+  //var dbPassword = "admin"
   var labelSubject = "subject"
   var labelName = "name"
   var tab_v = "dinh"
   var tab_e = "cooccurr_with"
   //var port     = 2424
-  //var username = "root"
-  //var password = "12345"
+  //var userRoot = "root"
+  //var pwdRoot = "12345"
 
-  def OrientDBUtils(hostType: String, hostAddress: String, database: String, dbUser: String, dbPassword: String) = {
-    this.hostType = hostType
-    this.hostAddress = hostAddress
-    this.database = database
-    this.dbUser = dbUser
-    this.dbPassword = dbPassword
+  //Constructor for graph
+  def this(hostType: String, hostAddress: String, database: String, dbUser: String, dbPassword: String) = {
+    this(hostType, hostAddress, database, dbUser, dbPassword, "", "")
+  }
+
+  //Constructor default
+  def this() = {
+    this("remote:","localhost", "CoOccurrenceGraph","admin", "admin", "root", "12345")
   }
 
   /**
@@ -285,8 +289,88 @@ class OrientDBUtils {
       return null
     }
 
-    var db = new OPartitionedDatabasePool(uri, dbUser, dbPassword)
+    var factory = new OPartitionedDatabasePool(uri, userRoot, pwdRoot)
+    var db = factory.acquire()
 
-    db
+    try {
+      if (!db.exists) {
+        println("Database chưa tồn tại, chương trình sẽ tiến hành khởi tạo!")
+        if ((hostType == "plocal:") || (hostType == "memory:")) {
+          db.create
+        } else {
+          new OServerAdmin(uri).connect(userRoot, pwdRoot).createDatabase(database, "document", "plocal").close
+        }
+      }
+    } catch {
+      case t: Throwable => {
+        println("************************ ERROR ************************")
+        println("Có LỖI xảy ra!!")
+        t.printStackTrace() // TODO: handle error
+        println("************************ ERROR ************************")
+      }
+    } finally {
+      println("Kết nối thành công với cơ sở dữ liệu!")
+      db.close
+      //factory.close
+      println("All Done!!!")
+    }
+
+    factory
+  }
+
+  def insertDoc(docName: String, data: List[(String, String)]) = {
+    val factory = connectDBUsingDocAPI()
+    val db = factory.acquire()
+    db.begin
+    try {
+      val doc = new ODocument(docName)
+      data.foreach(item => {
+        doc.field(item._1, item._2)
+      })
+      doc.save
+      db.commit
+    } catch {
+      case t: Throwable => {
+        db.rollback
+        println("************************ ERROR ************************")
+        println("Có LỖI xảy ra!!")
+        t.printStackTrace() // TODO: handle error
+        println("************************ ERROR ************************")
+      }
+    } finally {
+      println("Thực hiện thành công lệnh thêm dữ liệu!")
+      db.close
+      factory.close
+      println("All Done!!!")
+    }
+  }
+
+  def insertDocInBatches(data: List[(String, List[(String, String)])]) = {
+    val factory = connectDBUsingDocAPI()
+    val db = factory.acquire()
+    db.begin
+    try {
+      data.foreach(item => {
+        val doc = new ODocument(item._1)
+        item._2.foreach(subItem => {
+          doc.field(subItem._1, subItem._2)
+        })
+        doc.save
+      })
+      db.commit
+    } catch {
+      case t: Throwable => {
+        db.rollback
+        println("************************ ERROR ************************")
+        println("Có LỖI xảy ra!!")
+        t.printStackTrace() // TODO: handle error
+        println("************************ ERROR ************************")
+      }
+    } finally {
+      println("Thực hiện thành công lệnh thêm dữ liệu!")
+      db.close
+      factory.close
+      println("All Done!!!")
+    }
   }
 }
