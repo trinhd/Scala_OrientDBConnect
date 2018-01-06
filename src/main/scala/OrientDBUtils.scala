@@ -318,8 +318,7 @@ class OrientDBUtils(hostType: String, hostAddress: String, database: String, dbU
     factory
   }
 
-  def insertDoc(docName: String, data: List[(String, String)]) = {
-    val factory = connectDBUsingDocAPI()
+  def insertDoc(factory: OPartitionedDatabasePool, docName: String, data: List[(String, String)]) = {
     val db = factory.acquire()
     db.begin
     try {
@@ -340,13 +339,11 @@ class OrientDBUtils(hostType: String, hostAddress: String, database: String, dbU
     } finally {
       println("Thực hiện thành công lệnh thêm dữ liệu!")
       db.close
-      factory.close
       println("All Done!!!")
     }
   }
 
-  def insertDocInBatches(data: List[(String, List[(String, String)])]) = {
-    val factory = connectDBUsingDocAPI()
+  def insertDocInBatches(factory: OPartitionedDatabasePool, data: List[(String, List[(String, String)])]) = {
     val db = factory.acquire()
     db.begin
     try {
@@ -369,7 +366,6 @@ class OrientDBUtils(hostType: String, hostAddress: String, database: String, dbU
     } finally {
       println("Thực hiện thành công lệnh thêm dữ liệu!")
       db.close
-      factory.close
       println("All Done!!!")
     }
   }

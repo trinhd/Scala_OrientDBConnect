@@ -10,9 +10,14 @@ object MainProgram {
     val v2 = OrientDBUtils.insertVertex(factory, "Name", "Tri")
     val edgeID = OrientDBUtils.insertEdge(factory, v1, v2)
     val datas = Map("Nguyen" -> "Name", "Ho" -> "Name", "Duy" -> "Name")
-    //OrientDBUtils.insertVertexInBatches(factory, datas)
+    OrientDBUtils.insertVertexInBatches(factory, datas)
     
     val OrientDBUtilsDoc = new OrientDBUtils("remote:","localhost", "CoOccurrenceGraph","admin", "admin", "root", "12345")
-    OrientDBUtilsDoc.insertDoc("CCC", List(("Name", "DDDDDDDDD")))
+    val pool = OrientDBUtilsDoc.connectDBUsingDocAPI
+    OrientDBUtilsDoc.insertDoc(pool, "CCC", List(("Name", "DDDDDDDDD")))
+    OrientDBUtilsDoc.insertDoc(pool, "DDD", List(("Name", "EEEEEEEEE")))
+    
+    factory.close
+    pool.close
   }
 }
