@@ -14,8 +14,8 @@ object MainProgram {
     
     val OrientDBUtilsDoc = new OrientDBUtils("remote:","localhost", "CoOccurrenceGraph","admin", "admin", "root", "12345")
     val pool = OrientDBUtilsDoc.connectDBUsingDocAPI
-    OrientDBUtilsDoc.insertDoc(pool, "CCC", List(("Name", "DDDDDDDDD")))
-    OrientDBUtilsDoc.insertDoc(pool, "DDD", List(("Name", "EEEEEEEEE")))
+    OrientDBUtilsDoc.insertDoc(pool, List(("topic", "CCCCC"), ("Name", "DDDDDDDDD")))
+    OrientDBUtilsDoc.insertDoc(pool, List(("topic", "DDDDD"), ("Name", "EEEEEEEEE")))
     
     //factory.close
     pool.close
